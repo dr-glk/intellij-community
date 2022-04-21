@@ -1,0 +1,4 @@
+MODULE commonMain { platform=[JVM] }
+MODULE jvmMain { platform=[JVM] }
+
+jvmMain -> commonMain { kind=DEPENDS_ON }

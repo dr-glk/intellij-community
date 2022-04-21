@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.idea.project.isHMPPEnabled
 import org.jetbrains.kotlin.idea.project.languageVersionSettings
 import org.jetbrains.kotlin.idea.project.platform
 import org.jetbrains.kotlin.platform.TargetPlatform
+import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.utils.addToStdlib.filterIsInstanceWithChecker
 import java.io.File
 import org.jetbrains.plugins.gradle.util.GradleUtil
@@ -61,10 +62,35 @@ class ProjectInfo(
     private val expectedModuleNames = HashSet<String>()
     private var allModulesAsserter: (ModuleInfo.() -> Unit)? = null
 
+    fun fromTestCase(testCase: GradleTestCase)
+    {
+        allModules {
+            when (testCase.assertType) {
+                AssertType.assertExhaustiveModuleDependencyList -> assertExhaustiveModuleDependencyList() //maybe better to use reflection or even extract asserts from Module info
+                AssertType.assertNoDependencyInBuildClasses -> assertNoDependencyInBuildClasses()
+            }
+
+        }
+
+        module(testCase.projectName) {targetPlatform(JvmPlatforms.defaultJvmPlatform)}
+
+        for(module in testCase.modules)
+        {
+            module(testCase.projectName+"."+module.name) { targetPlatform( platforms = module.targets.map { it }.toTypedArray())
+            for(dependency in module.dependencies)
+            {
+                moduleDependency(testCase.projectName+"."+dependency.name,dependency.depScope)
+            }
+            }
+        }
+
+    }
+
     fun allModules(body: ModuleInfo.() -> Unit) {
         assert(allModulesAsserter == null)
         allModulesAsserter = body
     }
+
 
     fun module(name: String, isOptional: Boolean = false, body: ModuleInfo.() -> Unit = {}) {
         val module = moduleManager.findModuleByName(name)
